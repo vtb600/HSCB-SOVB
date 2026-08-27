@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Công Cụ Đổi Tên File PDF Hàng Loạt</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: #0f172a;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    padding: 28px 24px;
+    text-align: center;
+  }
+  header h1 { font-size: 24px; font-weight: 700; }
+  header p { margin-top: 8px; font-size: 14px; opacity: .9; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .card h2 { font-size: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .step {
+    background: var(--primary); color: #fff; width: 26px; height: 26px;
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .dropzone {
+    border: 2px dashed #94a3b8;
+    border-radius: 10px;
+    padding: 30px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: #f8fafc;
+  }
+  .dropzone:hover, .dropzone.over { border-color: var(--primary); background: #eff6ff; }
+  .dropzone .icon { font-size: 34px; }
+  .dropzone p { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .dropzone p strong { color: var(--primary); }
+  .hidden { display: none !important; }
+  .btn {
+    display: inline-block; border: none; cursor: pointer; font-weight: 600;
+    padding: 10px 18px; border-radius: 8px; font-size: 14px; transition: all .2s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+  .btn-outline:hover { background: #eff6ff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .file-chip {
+    display: inline-flex; align-items: center; gap: 8px; background: #f8fafc;
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; color: var(--muted); margin-top: 10px;
+  }
+  .file-chip span { color: var(--primary); font-weight: 600; }
+  .table-wrap { overflow: auto; max-height: 380px; border: 1px solid var(--border); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    position: sticky; top: 0; background: #f1f5f9; text-align: left;
+    padding: 10px 12px; font-weight: 600; z-index: 1;
+  }
+  tbody td { padding: 9px 12px; border-top: 1px solid var(--border); word-break: break-all; }
+  tbody tr:hover { background: #f8fafc; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .tag-ok { background: #dcfce7; color: #15803d; }
+  .tag-warn { background: #fef3c7; color: #b45309; }
+  .tag-error { background: #fee2e2; color: #b91c1c; }
+  .tag-info { background: #e0e7ff; color: #4338ca; }
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .stat { flex: 1; min-width: 140px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat .num { font-size: 24px; font-weight: 700; }
+  .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stat.ok .num { color: var(--success); }
+  .stat.warn .num { color: var(--warning); }
+  .stat.err .num { color: var(--danger); }
+  .stat.total .num { color: var(--primary); }
+  .msg { font-size: 13px; margin-top: 10px; }
+  .msg.error { color: var(--danger); }
+  .msg.ok { color: var(--success); }
+  .actions { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+  footer { text-align: center; font-size: 12px; color: var(--muted); padding: 20px; }
+  .toggle-row { margin-top: 12px; font-size: 13px; color: #334155; display: flex; align-items: center; gap: 8px; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Đổi Tên File PDF Hàng Loạt Theo File Excel</h1>
+  <p>Chọn file Excel chứa danh sách tên cũ / tên mới, chọn thư mục chứa PDF, và tải về bản đã đổi tên.</p>
+</header>
+
+<main>
+  <!-- Bước 1 -->
+  <div class="card">
+    <h2><span class="step">1</span> Chọn file Excel (ví dụ rename.xlsx)</h2>
+    <div class="dropzone" id="excelDrop">
+      <div class="icon">📄</div>
+      <p><strong>Nhấp để chọn</strong> hoặc kéo thả file <code>.xlsx</code> / <code>.xls</code> vào đây</p>
+    </div>
+    <input type="file" id="excelInput" class="hidden" accept=".xlsx,.xls,.csv">
+    <div class="file-chip hidden" id="excelChip"></div>
+    <div class="msg" id="excelMsg"></div>
+    <div class="toggle-row hidden" id="columnRow">
+      <label for="colOld">Cột tên cũ:</label>
+      <input type="text" id="colOld" style="width:110px; padding:5px; border:1px solid var(--border); border-radius:6px;">
+      <label for="colNew">Cột tên mới:</label>
+      <input type="text" id="colNew" style="width:110px; padding:5px; border:1px solid var(--border); border-radius:6px;">
+      <button class="btn btn-outline btn-sm" id="applyCols">Áp dụng</button>
+    </div>
+  </div>
+
+  <!-- Bước 2 -->
+  <div class="card">
+    <h2><span class="step">2</span> Chọn thư mục / file PDF</h2>
+    <div class="row">
+      <button class="btn btn-primary" id="chooseDir">📁 Chọn thư mục PDF</button>
+      <button class="btn btn-outline" id="chooseFiles">📄 Chọn nhiều file PDF</button>
+    </div>
+    <div class="dropzone hidden" id="pdfDrop" style="margin-top:12px;">
+      <div class="icon">📁</div>
+      <p><strong>Kéo thả</strong> các file PDF vào đây</p>
+    </div>
+    <input type="file" id="pdfInput" class="hidden" accept=".pdf" multiple webkitdirectory>
+    <div class="file-chip hidden" id="pdfChip"></div>
+  </div>
+
+  <!-- Bước 3 -->
+  <div class="card">
+    <h2><span class="step">3</span> Xem trước &amp; Tải về</h2>
+    <div id="previewArea">
+      <p class="note">Danh sách file sẽ hiển thị ở đây sau khi chọn cả Excel và PDF.</p>
+    </div>
+  </div>
+</main>
+
+<footer>Xử lý hoàn toàn trên trình duyệt, dữ liệu không được gửi đi đâu.</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var excelFile = null;
+  var mapping = [];        // { tenCu, tenMoi }
+  var mapByKey = {};       // key (normalized tenCu) -> tenMoi
+  var pdfFiles = [];       // { name, size, ext, file }
+  var renameRows = [];     // preview rows
+
+  var el = {
+    excelDrop: document.getElementById("excelDrop"),
+    excelInput: document.getElementById("excelInput"),
+    excelChip: document.getElementById("excelChip"),
+    excelMsg: document.getElementById("excelMsg"),
+    columnRow: document.getElementById("columnRow"),
+    colOld: document.getElementById("colOld"),
+    colNew: document.getElementById("colNew"),
+    applyCols: document.getElementById("applyCols"),
+    chooseDir: document.getElementById("chooseDir"),
+    chooseFiles: document.getElementById("chooseFiles"),
+    pdfDrop: document.getElementById("pdfDrop"),
+    pdfInput: document.getElementById("pdfInput"),
+    pdfChip: document.getElementById("pdfChip"),
+    previewArea: document.getElementById("previewArea")
+  };
+
+  function setMsg(elNode, text, type) {
+    elNode.textContent = text;
+    elNode.className = "msg " + (type || "");
+  }
+
+  function normName(n) {
+    if (!n) return "";
+    return String(n).trim().replace(/\s+/g, " ").toLowerCase();
+  }
+
+  function stripExt(name) {
+    var i = name.lastIndexOf(".");
+    return i > 0 ? name.slice(0, i) : name;
+  }
+
+  // ---------- STEP 1: Excel ----------
+  function handleExcel(file) {
+    excelFile = file;
+    el.excelChip.innerHTML = "File: <span>" + escapeHtml(file.name) + "</span> (" + fmtSize(file.size) + ")";
+    el.excelChip.classList.remove("hidden");
+    setMsg(el.excelMsg, "Đang đọc file Excel...", "");
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        if (!rows.length) {
+          setMsg(el.excelMsg, "File Excel không có dữ liệu.", "error");
+          return;
+        }
+        var keys = Object.keys(rows[0]);
+        var colOld = guessCol(keys, ["ten_cu", "tencu", "old", "name_cu", "oldname", "file_cu", "tên cũ", "ten cu"]);
+        var colNew = guessCol(keys, ["ten_moi", "tenmoi", "new", "name_moi", "newname", "file_moi", "tên mới", "ten moi"]);
+        if (colOld) el.colOld.value = colOld;
+        if (colNew) el.colNew.value = colNew;
+        el.columnRow.classList.remove("hidden");
+        buildMapping(colOld || keys[0], colNew || keys[1]);
+      } catch (err) {
+        setMsg(el.excelMsg, "Lỗi đọc file Excel: " + err.message, "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function guessCol(keys, candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      var c = normName(candidates[i]);
+      for (var j = 0; j < keys.length; j++) {
+        if (normName(keys[j]) === c) return keys[j];
+      }
+    }
+    return null;
+  }
+
+  function buildMapping(colOld, colNew) {
+    if (!excelFile) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        mapping = [];
+        mapByKey = {};
+        var dupeOld = [], dupeNew = [];
+        var seenOld = {}, seenNew = {};
+        rows.forEach(function (r) {
+          var o = r[colOld], n = r[colNew];
+          if (o === undefined || o === null || String(o).trim() === "") return;
+          var row = { tenCu: String(o).trim(), tenMoi: String(n === undefined || n === null ? "" : n).trim() };
+          mapping.push(row);
+          var key = normName(stripExt(row.tenCu));
+          if (seenOld[key]) dupeOld.push(row.tenCu);
+          else seenOld[key] = true;
+          var nk = normName(stripExt(row.tenMoi));
+          if (row.tenMoi && seenNew[nk]) dupeNew.push(row.tenMoi);
+          else if (row.tenMoi) seenNew[nk] = true;
+          mapByKey[key] = row.tenMoi;
+        });
+        var warn = [];
+        if (!mapping.length) warn.push("Không tìm thấy dòng dữ liệu hợp lệ.");
+        if (dupeOld.length) warn.push("Tên cũ trùng lặp: " + dupeOld.slice(0, 3).join(", ") + "...");
+        if (dupeNew.length) warn.push("Tên mới trùng nhau: " + dupeNew.slice(0, 3).join(", ") + "...");
+        setMsg(el.excelMsg,
+          "Đã đọc " + mapping.length + " dòng mapping." + (warn.length ? " ⚠ " + warn.join(" | ") : ""),
+          warn.length ? "error" : "ok");
+        refreshPreview();
+      } catch (err) {
+        setMsg(el.excelMsg, "Lỗi đọc file Excel: " + err.message, "error");
+      }
+    };
+    reader.readAsArrayBuffer(excelFile);
+  }
+
+  // ---------- STEP 2: PDF files ----------
+  function handlePdfFiles(fileList) {
+    var list = Array.prototype.slice.call(fileList).filter(function (f) {
+      return /\.pdf$/i.test(f.name);
+    });
+    pdfFiles = list.map(function (f) { return { name: f.name, size: f.size, file: f }; });
+    el.pdfChip.innerHTML = "Đã chọn: <span>" + pdfFiles.length + "</span> file PDF";
+    el.pdfChip.classList.remove("hidden");
+    refreshPreview();
+  }
+
+  // ---------- STEP 3: Preview ----------
+  function refreshPreview() {
+    if (!mapping.length) {
+      el.previewArea.innerHTML = '<p class="note">Vui lòng chọn file Excel ở bước 1.</p>';
+      return;
+    }
+    if (!pdfFiles.length) {
+      el.previewArea.innerHTML = '<p class="note">Vui lòng chọn thư mục / file PDF ở bước 2.</p>';
+      return;
+    }
+    buildRenameRows();
+    renderPreview();
+  }
+
+  function buildRenameRows() {
+    renameRows = [];
+    var usedNew = {};
+    pdfFiles.forEach(function (pf) {
+      var key = normName(stripExt(pf.name));
+      var tenMoi = mapByKey[key];
+      var row;
+      if (tenMoi === undefined || tenMoi === "") {
+        row = { pf: pf, newName: pf.name, status: "notfound", tag: "tag-warn", statusText: "Không có trong Excel" };
+      } else {
+        var ext = /\.pdf$/i.test(tenMoi) ? "" : ".pdf";
+        var newName = tenMoi + ext;
+        if (usedNew[normName(newName)]) {
+          row = { pf: pf, newName: newName, status: "dupe", tag: "tag-error", statusText: "Trùng tên mới" };
+        } else {
+          usedNew[normName(newName)] = true;
+          row = { pf: pf, newName: newName, status: "ok", tag: "tag-ok", statusText: "Sẽ đổi tên" };
+        }
+      }
+      renameRows.push(row);
+    });
+  }
+
+  function renderPreview() {
+    var ok = 0, warn = 0, err = 0;
+    renameRows.forEach(function (r) {
+      if (r.status === "ok") ok++;
+      else if (r.status === "notfound") warn++;
+      else err++;
+    });
+    var html = '<div class="stats">' +
+      '<div class="stat total"><div class="num">' + pdfFiles.length + '</div><div class="lbl">Tổng file PDF</div></div>' +
+      '<div class="stat ok"><div class="num">' + ok + '</div><div class="lbl">Sẽ đổi tên</div></div>' +
+      '<div class="stat warn"><div class="num">' + warn + '</div><div class="lbl">Không có trong Excel</div></div>' +
+      '<div class="stat err"><div class="num">' + err + '</div><div class="lbl">Lỗi / trùng tên</div></div>' +
+      '</div>';
+
+    html += '<div class="actions">' +
+      '<button class="btn btn-primary" id="downloadBtn">⬇ Tải về bản đã đổi tên (ZIP)</button>' +
+      '<button class="btn btn-outline" id="exportListBtn">Xuất danh sách (CSV)</button>' +
+      '</div>';
+
+    html += '<div class="table-wrap"><table><thead><tr>' +
+      '<th style="width:30px"><input type="checkbox" id="checkAll" checked></th>' +
+      '<th>Tên cũ</th><th>Tên mới</th><th>Trạng thái</th></tr></thead><tbody>';
+
+    renameRows.forEach(function (r, i) {
+      html += '<tr>' +
+        '<td><input type="checkbox" class="row-check" data-idx="' + i + '" checked></td>' +
+        '<td>' + escapeHtml(r.pf.name) + '</td>' +
+        '<td>' + (r.status === "ok" ? '<strong>' + escapeHtml(r.newName) + '</strong>' : escapeHtml(r.newName)) + '</td>' +
+        '<td><span class="tag ' + r.tag + '">' + r.statusText + '</span></td></tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '<div class="note">Các file không có trong Excel sẽ được giữ nguyên tên. Các file "trùng tên mới" bị bỏ qua.</div>';
+    el.previewArea.innerHTML = html;
+
+    document.getElementById("checkAll").addEventListener("change", function (ev) {
+      var all = ev.target.checked;
+      document.querySelectorAll(".row-check").forEach(function (cb) { cb.checked = all; });
+    });
+    document.getElementById("downloadBtn").addEventListener("click", downloadZip);
+    document.getElementById("exportListBtn").addEventListener("click", exportCsv);
+  }
+
+  function selectedRows() {
+    var sel = [];
+    document.querySelectorAll(".row-check:checked").forEach(function (cb) {
+      sel.push(renameRows[parseInt(cb.dataset.idx, 10)]);
+    });
+    return sel;
+  }
+
+  function downloadZip() {
+    var rows = selectedRows();
+    if (!rows.length) { alert("Không có file nào được chọn."); return; }
+    var zip = new JSZip();
+    var used = {};
+    var dupCount = 0;
+    rows.forEach(function (r) {
+      var name = r.newName;
+      var key = normName(name);
+      if (used[key]) { dupCount++; return; }
+      used[key] = true;
+      zip.file(name, r.pf.file);
+    });
+    var btn = document.getElementById("downloadBtn");
+    var old = btn.innerHTML;
+    btn.innerHTML = "Đang tạo ZIP...";
+    btn.disabled = true;
+    zip.generateAsync({ type: "blob" }).then(function (blob) {
+      saveAs(blob, "pdf-da-doi-ten.zip");
+      btn.innerHTML = old;
+      btn.disabled = false;
+      if (dupCount) alert("Đã bỏ qua " + dupCount + " file bị trùng tên.");
+    }).catch(function (err) {
+      btn.innerHTML = old;
+      btn.disabled = false;
+      alert("Lỗi tạo ZIP: " + err.message);
+    });
+  }
+
+  function saveAs(blob, filename) {
+    var a = document.createElement("a");
+    var url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+  }
+
+  function exportCsv() {
+    var rows = selectedRows();
+    if (!rows.length) { alert("Không có file nào được chọn."); return; }
+    var lines = ["ten_cu,ten_moi,trang_thai"];
+    rows.forEach(function (r) {
+      lines.push(csvField(r.pf.name) + "," + csvField(r.newName) + "," + csvField(r.statusText));
+    });
+    var blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    saveAs(blob, "danh-sach-doi-ten.csv");
+  }
+
+  function csvField(v) {
+    return '"' + String(v).replace(/"/g, '""') + '"';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function fmtSize(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1048576).toFixed(1) + " MB";
+  }
+
+  // ---------- Events ----------
+  el.excelDrop.addEventListener("click", function () { el.excelInput.click(); });
+  el.excelInput.addEventListener("change", function () { if (el.excelInput.files[0]) handleExcel(el.excelInput.files[0]); });
+  el.excelDrop.addEventListener("dragover", function (e) { e.preventDefault(); el.excelDrop.classList.add("over"); });
+  el.excelDrop.addEventListener("dragleave", function () { el.excelDrop.classList.remove("over"); });
+  el.excelDrop.addEventListener("drop", function (e) {
+    e.preventDefault();
+    el.excelDrop.classList.remove("over");
+    if (e.dataTransfer.files.length) handleExcel(e.dataTransfer.files[0]);
+  });
+
+  el.chooseDir.addEventListener("click", function () {
+    if (window.showDirectoryPicker) {
+      pickDirectory();
+    } else {
+      el.pdfInput.setAttribute("webkitdirectory", "");
+      el.pdfInput.removeAttribute("multiple");
+      el.pdfInput.click();
+    }
+  });
+
+  el.chooseFiles.addEventListener("click", function () {
+    el.pdfInput.removeAttribute("webkitdirectory");
+    el.pdfInput.setAttribute("multiple", "");
+    el.pdfInput.click();
+  });
+
+  el.pdfInput.addEventListener("change", function () {
+    if (el.pdfInput.files.length) handlePdfFiles(el.pdfInput.files);
+    el.pdfInput.value = "";
+  });
+
+  el.pdfDrop.addEventListener("dragover", function (e) { e.preventDefault(); el.pdfDrop.classList.add("over"); });
+  el.pdfDrop.addEventListener("dragleave", function () { el.pdfDrop.classList.remove("over"); });
+  el.pdfDrop.addEventListener("drop", function (e) {
+    e.preventDefault();
+    el.pdfDrop.classList.remove("over");
+    if (e.dataTransfer.files.length) handlePdfFiles(e.dataTransfer.files);
+  });
+
+  el.applyCols.addEventListener("click", function () {
+    if (el.colOld.value && el.colNew.value) buildMapping(el.colOld.value.trim(), el.colNew.value.trim());
+  });
+
+  async function pickDirectory() {
+    try {
+      var dirHandle = await window.showDirectoryPicker();
+      var files = [];
+      for await (var entry of dirHandle.values()) {
+        if (entry.kind === "file" && entry.name.toLowerCase().endsWith(".pdf")) {
+          files.push(await entry.getFile());
+        }
+      }
+      if (!files.length) {
+        setMsg(el.excelMsg, "Thư mục không chứa file PDF nào.", "error");
+        return;
+      }
+      handlePdfFiles(files);
+    } catch (err) {
+      if (err.name !== "AbortError") setMsg(el.excelMsg, "Lỗi đọc thư mục: " + err.message, "error");
+    }
+  }
+
+  // Legacy: show .pdfDrop when not using directory picker
+  if (!window.showDirectoryPicker) {
+    el.pdfDrop.classList.remove("hidden");
+  }
+
+})();
+</script>
+</body>
+</html>
