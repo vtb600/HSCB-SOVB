@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Xóa Tool - Xóa file PDF theo danh sách Excel</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f0f4f8;
+    color: #1f2933;
+    line-height: 1.5;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: #616e7c; font-size: 14px; margin-bottom: 20px; }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(16, 24, 40, .08);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; margin-bottom: 14px; color: #3e4c59; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  button {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #9aa5b1; cursor: not-allowed; }
+  button.secondary { background: #627d98; }
+  button.secondary:hover { background: #52606d; }
+  button.success { background: #0e9f6e; }
+  button.success:hover { background: #057a55; }
+  button.danger { background: #dc2626; }
+  button.danger:hover { background: #b91c1c; }
+  input[type="file"] { font-size: 14px; }
+  .badge {
+    display: inline-block;
+    background: #e4e7eb;
+    color: #3e4c59;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 13px;
+    margin: 4px 4px 0 0;
+  }
+  .badge.ok { background: #def7ec; color: #03543f; }
+  .badge.warn { background: #fde68a; color: #723b13; }
+  .badge.folder { background: #e0e7ff; color: #3730a3; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e4e7eb; }
+  th { background: #f7fafc; color: #3e4c59; position: sticky; top: 0; }
+  .table-wrap { max-height: 340px; overflow: auto; border: 1px solid #e4e7eb; border-radius: 8px; }
+  .status-pending { color: #616e7c; }
+  .status-ok { color: #057a55; font-weight: 600; }
+  .status-error { color: #b91c1c; font-weight: 600; }
+  .log {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    max-height: 240px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .log .info { color: #93c5fd; }
+  .log .ok { color: #6ee7b7; }
+  .log .err { color: #fca5a5; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 12px 0; }
+  .note { background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 20px; }
+  .danger-note { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .confirm-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fff5f5;
+  }
+  .summary { font-size: 14px; margin-top: 10px; }
+  .hidden { display: none; }
+  .empty { color: #9aa5b1; font-style: italic; padding: 12px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>PDF Xóa Tool</h1>
+  <p class="subtitle">Xóa file PDF theo danh sách Excel (cột <b>ten_file</b> và <b>ten_folder</b>)</p>
+
+  <div class="note danger-note">
+    <b>Cảnh báo:</b> Công cụ này <b>xoá vĩnh viễn</b> file PDF trên ổ đĩa của bạn,
+    <b>không thể khôi phục</b> (không đưa vào thùng rác). Công cụ dùng <i>File System Access API</i>,
+    hoạt động trên trình duyệt <b>Chrome</b>/<b>Edge</b> (desktop). Hãy sao lưu dữ liệu trước khi thực hiện.
+  </div>
+
+  <!-- Bước 1: Chọn thư mục -->
+  <div class="card">
+    <h2>1. Chọn thư mục gốc chứa các folder</h2>
+    <div class="row">
+      <button id="btnPickDir" onclick="pickDirectory()">Chọn thư mục gốc</button>
+      <span id="dirStatus" class="status-pending">Chưa chọn thư mục</span>
+    </div>
+    <div id="dirInfo" class="hidden" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- Bước 2: Import Excel -->
+  <div class="card">
+    <h2>2. Import danh sách Excel</h2>
+    <div class="row">
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="importExcel(event)">
+      <button id="btnPreview" class="secondary" disabled onclick="renderTable()">Xem trước</button>
+    </div>
+    <div id="excelInfo" class="hidden" style="margin-top:10px;"></div>
+    <div class="table-wrap" id="tableWrap" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- Bước 3: Xác nhận và xóa -->
+  <div class="card">
+    <h2>3. Xác nhận và thực hiện xóa</h2>
+    <label class="confirm-row">
+      <input type="checkbox" id="chkConfirm">
+      Tôi hiểu rõ việc này sẽ <b>xoá vĩnh viễn</b> các file PDF được liệt kê và không thể khôi phục.
+    </label>
+    <div class="row">
+      <button id="btnDelete" class="danger" disabled onclick="doDelete()">Xóa file</button>
+      <button id="btnReset" class="secondary" disabled onclick="resetApp()">Đặt lại</button>
+      <span id="deleteStatus" class="status-pending">Sẵn sàng</span>
+    </div>
+    <div id="summaryBox" class="hidden summary"></div>
+    <h2 style="margin-top:18px;">Nhật ký</h2>
+    <div class="log" id="logBox"></div>
+  </div>
+</div>
+
+<script>
+const logBox = document.getElementById('logBox');
+const dirStatus = document.getElementById('dirStatus');
+const dirInfo = document.getElementById('dirInfo');
+const excelInfo = document.getElementById('excelInfo');
+const tableWrap = document.getElementById('tableWrap');
+const btnPreview = document.getElementById('btnPreview');
+const btnDelete = document.getElementById('btnDelete');
+const btnReset = document.getElementById('btnReset');
+const deleteStatus = document.getElementById('deleteStatus');
+const summaryBox = document.getElementById('summaryBox');
+const chkConfirm = document.getElementById('chkConfirm');
+
+let rootHandle = null;
+let excelRows = [];       // [{ten_file, ten_folder}]
+let deleteResults = null;
+
+function log(msg, type) {
+  const line = document.createElement('div');
+  line.className = type || 'info';
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  logBox.appendChild(line);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+/* ---------- Bước 1: chọn thư mục ---------- */
+async function pickDirectory() {
+  if (!window.showDirectoryPicker) {
+    log('Trình duyệt không hỗ trợ File System Access API. Vui lòng dùng Chrome/Edge mới nhất.', 'err');
+    return;
+  }
+  try {
+    rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    dirStatus.innerHTML = '<b>' + escapeHtml(rootHandle.name) + '</b>';
+    dirInfo.classList.remove('hidden');
+    dirInfo.innerHTML = 'Đã chọn thư mục gốc <b>' + escapeHtml(rootHandle.name) + '</b>. Các folder trong danh sách Excel sẽ được tìm trong thư mục này.';
+    log('Đã chọn thư mục gốc: ' + rootHandle.name);
+    updateDeleteButton();
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    log('Lỗi chọn thư mục: ' + e.message, 'err');
+  }
+}
+
+/* ---------- Bước 2: import excel ---------- */
+async function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    excelRows = parseMapping(json);
+    if (excelRows.length === 0) {
+      log('Không tìm thấy dữ liệu hợp lệ. Cần có cột tên file và cột tên folder.', 'err');
+      excelInfo.classList.remove('hidden');
+      excelInfo.innerHTML = '<b style="color:#b91c1c">Không đọc được dữ liệu.</b> Kiểm tra tên cột: cần <code>ten_file</code> và <code>ten_folder</code>';
+      btnPreview.disabled = true;
+      btnDelete.disabled = true;
+      return;
+    }
+    excelInfo.classList.remove('hidden');
+    excelInfo.innerHTML = 'Đọc được <b>' + excelRows.length + '</b> dòng từ sheet <b>' + escapeHtml(wb.SheetNames[0]) + '</b>.';
+    log('Đã import ' + excelRows.length + ' dòng từ ' + file.name);
+    btnPreview.disabled = false;
+    renderTable();
+    updateDeleteButton();
+  } catch (e) {
+    log('Lỗi đọc Excel: ' + e.message, 'err');
+  }
+}
+
+function parseMapping(json) {
+  if (!json || json.length === 0) return [];
+  const headers = Object.keys(json[0]);
+  const norm = h => h.trim().toLowerCase().replace(/[^a-z]/g, '');
+  let fileCol = null, folderCol = null;
+  for (const h of headers) {
+    const n = norm(h);
+    if (!fileCol && (n === 'tenfile' || n === 'file' || n === 'filename' || n === 'name' || n.includes('tenfile'))) fileCol = h;
+    if (!folderCol && (n === 'tenfolder' || n === 'folder' || n === 'foldername' || n === 'directory' || n === 'dir' || n.includes('tenfolder'))) folderCol = h;
+  }
+  if (!fileCol || !folderCol) return [];
+  const rows = [];
+  for (const r of json) {
+    const f = String(r[fileCol] || '').trim();
+    const d = String(r[folderCol] || '').trim();
+    if (f && d) rows.push({ ten_file: f, ten_folder: d });
+  }
+  return rows;
+}
+
+function renderTable() {
+  if (excelRows.length === 0) {
+    tableWrap.innerHTML = '<div class="empty">Chưa có dữ liệu</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>#</th><th>Tên file</th><th>Folder chứa</th><th>Trạng thái</th></tr></thead><tbody>';
+  excelRows.forEach((r, i) => {
+    const st = deleteResults ? (deleteResults[i] ? deleteResults[i].status : '') : '';
+    html += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(r.ten_file) + '</td><td>' + escapeHtml(r.ten_folder) + '</td><td id="st' + i + '">' + statusHtml(st) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  tableWrap.innerHTML = html;
+}
+
+function statusHtml(st) {
+  if (!st) return '<span class="status-pending">Chưa thực hiện</span>';
+  if (st === 'ok') return '<span class="status-ok">Đã xóa</span>';
+  if (st === 'notfound') return '<span class="status-error">Không tìm thấy</span>';
+  if (st === 'nofolder') return '<span class="status-error">Không tìm thấy folder</span>';
+  if (st === 'error') return '<span class="status-error">Lỗi</span>';
+  return '<span class="status-error">' + escapeHtml(st) + '</span>';
+}
+
+/* ---------- Bước 3: xóa ---------- */
+async function doDelete() {
+  if (!rootHandle || excelRows.length === 0) return;
+  if (!chkConfirm.checked) return;
+  btnDelete.disabled = true;
+  deleteStatus.innerHTML = '<b style="color:#b45309">Đang xóa...</b>';
+  deleteResults = [];
+  let ok = 0, notfound = 0, nofolder = 0, errors = 0;
+
+  for (let i = 0; i < excelRows.length; i++) {
+    const row = excelRows[i];
+    const folderName = row.ten_folder.replace(/[\\/:*?"<>|]/g, '_').trim();
+    const baseName = row.ten_file.replace(/\.pdf$/i, '').toLowerCase();
+
+    let dirHandle;
+    try {
+      dirHandle = await rootHandle.getDirectoryHandle(folderName);
+    } catch (e) {
+      deleteResults.push({ status: 'nofolder', msg: 'Không tìm thấy folder: ' + folderName });
+      nofolder++;
+      updateRow(i, 'nofolder');
+      log('Không tìm thấy folder: ' + folderName, 'err');
+      continue;
+    }
+
+    try {
+      const fileHandle = await findFileInDir(dirHandle, baseName);
+      if (!fileHandle) {
+        deleteResults.push({ status: 'notfound', msg: 'Không tìm thấy: ' + row.ten_file + ' trong ' + folderName });
+        notfound++;
+        updateRow(i, 'notfound');
+        log('Không tìm thấy: ' + row.ten_file + ' trong ' + folderName, 'err');
+        continue;
+      }
+      await fileHandle.remove();
+      deleteResults.push({ status: 'ok', msg: 'Đã xóa: ' + fileHandle.name + ' (folder ' + folderName + ')' });
+      ok++;
+      updateRow(i, 'ok');
+      log('Đã xóa: ' + fileHandle.name + ' trong ' + folderName, 'ok');
+    } catch (e) {
+      deleteResults.push({ status: 'error', msg: 'Lỗi: ' + row.ten_file + ' - ' + e.message });
+      errors++;
+      updateRow(i, 'error');
+      log('Lỗi: ' + row.ten_file + ' - ' + e.message, 'err');
+    }
+  }
+
+  deleteStatus.innerHTML = '<b>Hoàn tất</b>';
+  summaryBox.classList.remove('hidden');
+  summaryBox.innerHTML = 'Đã xóa: <b style="color:#057a55">' + ok + '</b> | Không tìm thấy file: <b style="color:#b91c1c">' + notfound + '</b> | Không tìm thấy folder: <b style="color:#b91c1c">' + nofolder + '</b> | Lỗi: <b style="color:#b91c1c">' + errors + '</b>';
+  log('Hoàn tất: ' + ok + ' đã xóa, ' + notfound + ' không tìm thấy file, ' + nofolder + ' không tìm thấy folder, ' + errors + ' lỗi.');
+}
+
+async function findFileInDir(dirHandle, baseName) {
+  for await (const entry of dirHandle.values()) {
+    if (entry.kind === 'file') {
+      const key = entry.name.replace(/\.pdf$/i, '').toLowerCase();
+      if (key === baseName) return entry;
+    }
+  }
+  return null;
+}
+
+function updateRow(i, status) {
+  const el = document.getElementById('st' + i);
+  if (el) el.innerHTML = statusHtml(status);
+}
+
+function updateDeleteButton() {
+  btnDelete.disabled = !(rootHandle && excelRows.length > 0 && chkConfirm.checked);
+  btnReset.disabled = !(rootHandle || excelRows.length > 0);
+}
+
+chkConfirm.addEventListener('change', updateDeleteButton);
+
+function resetApp() {
+  rootHandle = null;
+  excelRows = [];
+  deleteResults = null;
+  chkConfirm.checked = false;
+  dirStatus.innerHTML = 'Chưa chọn thư mục';
+  dirInfo.classList.add('hidden');
+  dirInfo.innerHTML = '';
+  excelInfo.classList.add('hidden');
+  tableWrap.innerHTML = '<div class="empty">Chưa có dữ liệu</div>';
+  btnPreview.disabled = true;
+  btnDelete.disabled = true;
+  btnReset.disabled = true;
+  deleteStatus.innerHTML = 'Sẵn sàng';
+  summaryBox.classList.add('hidden');
+  document.getElementById('excelFile').value = '';
+  logBox.innerHTML = '';
+  log('Đã đặt lại công cụ.');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+</script>
+</body>
+</html>
