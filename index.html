@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Công Cụ PDF - Bộ tiện ích xử lý PDF</title>
+<style>
+  :root {
+    --vtb-blue-dark: #003C71;
+    --vtb-blue: #005B94;
+    --vtb-blue-light: #EAF2FA;
+    --vtb-red: #D31145;
+    --vtb-bg: #F4F7FB;
+    --vtb-card: #FFFFFF;
+    --vtb-border: #D7E0EA;
+    --vtb-text: #1A2733;
+    --vtb-muted: #6B7A88;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html, body {
+    height: 100%;
+  }
+  body {
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--vtb-bg);
+    color: var(--vtb-text);
+  }
+  header {
+    background: linear-gradient(135deg, var(--vtb-blue-dark), var(--vtb-blue));
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  header span {
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  .tabs {
+    display: flex;
+    background: var(--vtb-card);
+    border-bottom: 2px solid var(--vtb-border);
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    border: none;
+    background: transparent;
+    padding: 14px 22px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vtb-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab-btn:hover {
+    color: var(--vtb-blue);
+    background: var(--vtb-blue-light);
+  }
+  .tab-btn.active {
+    color: var(--vtb-blue-dark);
+    border-bottom-color: var(--vtb-red);
+    font-weight: 600;
+  }
+  main {
+    height: calc(100vh - 110px);
+  }
+  .tab-panel {
+    display: none;
+    height: 100%;
+  }
+  .tab-panel.active {
+    display: block;
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: var(--vtb-card);
+  }
+  @media (max-width: 640px) {
+    header span {
+      display: none;
+    }
+    .tab-btn {
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Công Cụ PDF</h1>
+  <span>Bộ tiện ích xử lý PDF</span>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab-btn active" data-target="tab-0">Tách PDF</button>
+  <button class="tab-btn" data-target="tab-1">Di chuyển PDF</button>
+  <button class="tab-btn" data-target="tab-2">Đổi tên PDF</button>
+  <button class="tab-btn" data-target="tab-3">Đóng dấu PDF</button>
+</nav>
+
+<main>
+  <div class="tab-panel active" id="tab-0">
+    <iframe src="TachPDF_sovb.html" title="Tách hồ sơ PDF"></iframe>
+  </div>
+  <div class="tab-panel" id="tab-1">
+    <iframe src="move-pdf-to-folder.html" title="Di chuyển file PDF"></iframe>
+  </div>
+  <div class="tab-panel" id="tab-2">
+    <iframe src="rename-pdf.html" title="Đổi tên file PDF hàng loạt"></iframe>
+  </div>
+  <div class="tab-panel" id="tab-3">
+    <iframe src="stamp_pdf_tesseract_freetext.html" title="Đóng dấu số văn bản"></iframe>
+  </div>
+</main>
+
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) { t.classList.remove('active'); });
+      panels.forEach(function (p) { p.classList.remove('active'); });
+
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.target).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
