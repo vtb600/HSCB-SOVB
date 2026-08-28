@@ -108,7 +108,7 @@
 
 <header>
   <div class="eyebrow">Tesseract OCR (offline) + Mistral Vision</div>
-  <h1>Nhận diện &amp; đóng dấu Số văn bản</h1>
+  <h1>Nhận diện &amp; đóng dấu Số văn bản (áp dụng cho VB 1 trang)</h1>
   <p>Tải lên file PDF hồ sơ gộp nhiều văn bản. Công cụ quét OCR offline một vùng cố định (nơi in
      "Số: ...") trước — chỉ khi OCR không đọc chắc chắn mới gọi Mistral AI, giúp tiết kiệm token.
      Số hiệu văn bản (vd "141" từ "Số: 141/TB-CNBTN-TCHC") sẽ được chèn vào góc trên-trái trang đầu
@@ -130,8 +130,8 @@
     <div class="field">
       <label for="ocrMode">Chế độ nhận diện số văn bản</label>
       <select id="ocrMode">
-        <option value="hybrid" selected>OCR trước — chỉ gọi Mistral khi OCR không chắc (khuyên dùng)</option>
-        <option value="ocr_only">Chỉ OCR — không gọi Mistral (nhanh nhất, miễn phí, cần vùng quét chuẩn)</option>
+        <option value="hybrid">OCR trước — chỉ gọi Mistral khi OCR không chắc (khuyên dùng)</option>
+        <option value="ocr_only" selected>Chỉ OCR — không gọi Mistral (nhanh nhất, miễn phí, cần vùng quét chuẩn)</option>
         <option value="mistral_only">Không dùng OCR — luôn gọi Mistral (như bản trước)</option>
       </select>
     </div>
@@ -213,13 +213,13 @@
   <div class="card">
     <h2><span class="num">C</span>Kiểu con dấu</h2>
     <div class="row3">
-      <div class="field"><label for="fontSize">Cỡ chữ</label><input type="number" id="fontSize" value="13" min="6" max="40" step="1"></div>
-      <div class="field"><label for="marginX">Cách mép trái (pt)</label><input type="number" id="marginX" value="36" min="0" step="1"></div>
-      <div class="field"><label for="marginY">Cách mép trên (pt)</label><input type="number" id="marginY" value="20" min="0" step="1"></div>
+      <div class="field"><label for="fontSize">Cỡ chữ</label><input type="number" id="fontSize" value="13" min="10" max="20" step="1"></div>
+      <div class="field"><label for="marginX">Cách mép trái (pt)</label><input type="number" id="marginX" value="15" min="0" step="1"></div>
+      <div class="field"><label for="marginY">Cách mép trên (pt)</label><input type="number" id="marginY" value="12" min="0" step="1"></div>
     </div>
     <div class="field">
       <label for="color">Màu chữ</label>
-      <input type="color" id="color" value="#ffffff" style="width:70px; padding:2px; height:36px;">
+      <input type="color" id="color" value="#f70202" style="width:70px; padding:2px; height:36px;">
       <span class="stamp-preview" id="stampPreview">141</span>
       <div class="warn">Mặc định là <strong>màu trắng</strong> theo yêu cầu — trên nền trang trắng chữ
         sẽ không nhìn thấy bằng mắt thường. Đổi màu ở đây nếu bạn cần kiểm tra kết quả trước.</div>
